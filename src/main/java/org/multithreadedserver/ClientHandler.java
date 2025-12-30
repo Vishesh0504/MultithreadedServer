@@ -1,22 +1,26 @@
-package org.example;
+package org.multithreadedserver;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 
-public class ClientHandler implements  Runnable {
+public class ClientHandler implements Runnable {
     Socket clientSocket;
+
     private static class HTTPRequest {
         String method;
         String path;
         java.util.Map<String, String> headers = new java.util.HashMap<>();
     }
-    ClientHandler(Socket clientSocket) {
+
+    public ClientHandler(Socket clientSocket) {
         this.clientSocket = clientSocket;
     }
+
     @Override
     public void run() {
+
         try (
                 BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
                 PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true)
@@ -24,14 +28,13 @@ public class ClientHandler implements  Runnable {
             HTTPRequest request = new HTTPRequest();
 
             String line = in.readLine();
-            if (line == null || line.isEmpty()) return;
+            if (line == null || line.isEmpty()) return; // Garbage request
 
             String[] parts = line.split(" ");
             if (parts.length >= 2) {
                 request.method = parts[0];
                 request.path = parts[1];
             } else {
-
                 return;
             }
 
@@ -51,7 +54,8 @@ public class ClientHandler implements  Runnable {
                 if ("/".equals(request.path)) {
                     sendResponse(out, 200, "Hello Home");
                 } else if ("/sleep".equals(request.path)) {
-                    Thread.sleep(5000); // Simulate slow DB query
+                    System.out.println("Sleeping");
+                    Thread.sleep(5000);
                     sendResponse(out, 200, "Awake now");
                 } else {
                     sendResponse(out, 404, "Not Found");
@@ -62,10 +66,15 @@ public class ClientHandler implements  Runnable {
 
         } catch (Exception e) {
             e.printStackTrace();
-        } finally {
-            try { clientSocket.close(); } catch (Exception e) { }
+        }finally {
+            try{
+                clientSocket.close();
+            }catch (Exception e){
+                e.printStackTrace();
+            }
         }
     }
+
 
     private void sendResponse(PrintWriter out, int statusCode, String body) {
         out.println("HTTP/1.1 " + statusCode + " OK");
@@ -75,3 +84,4 @@ public class ClientHandler implements  Runnable {
         out.println(body);
     }
 }
+
